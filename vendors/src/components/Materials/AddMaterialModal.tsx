@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAddMaterial } from "../../hooks/materials/useAddMaterial";
 import { useImageUpload } from "../../hooks/drive/useImageUpload";
+import { useVendors } from "../../hooks/vendors/useVendors";
 import type { Material } from "../../types/material";
 
 interface AddMaterialModalProps {
@@ -16,6 +17,7 @@ const AddMaterialModal = ({
 }: AddMaterialModalProps) => {
   const { addMaterial } = useAddMaterial();
   const { uploadImage, loading: uploadingImage } = useImageUpload();
+  const { vendors, loading: loadingVendors } = useVendors();
   const [formData, setFormData] = useState({
     itemName: "",
     category: "",
@@ -25,6 +27,7 @@ const AddMaterialModal = ({
     vendors: "",
     image: "",
   });
+  const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
 
@@ -40,6 +43,7 @@ const AddMaterialModal = ({
       vendors: "",
       image: "",
     });
+    setSelectedVendors([]);
     setImageFile(null);
     setImagePreview("");
     onClose();
@@ -57,13 +61,16 @@ const AddMaterialModal = ({
         imageUrl = await uploadImage(imageFile, undefined, formData.itemName);
       }
 
+      // Convert selected vendors array to comma-separated string
+      const vendorsString = selectedVendors.join(" , ");
+
       const materialData = {
         itemName: formData.itemName,
         category: formData.category,
         size: formData.size,
         unit: formData.unit,
         price: parseFloat(formData.price),
-        vendors: formData.vendors || null,
+        vendors: vendorsString || null,
         image: imageUrl || null,
       };
 
@@ -179,14 +186,52 @@ const AddMaterialModal = ({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Vendors
               </label>
-              <input
-                type="text"
-                name="vendors"
-                value={formData.vendors}
-                onChange={handleInputChange}
-                placeholder="e.g., Vendor A, Vendor B"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              {loadingVendors ? (
+                <p className="text-sm text-gray-500">Loading vendors...</p>
+              ) : (
+                <div className="space-y-2">
+                  <select
+                    onChange={(e) => {
+                      const vendor = e.target.value;
+                      if (vendor && !selectedVendors.includes(vendor)) {
+                        setSelectedVendors([...selectedVendors, vendor]);
+                      }
+                      e.target.value = "";
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Select vendors (optional)</option>
+                    {vendors.map((vendor) => (
+                      <option key={vendor.name} value={vendor.name}>
+                        {vendor.name}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedVendors.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedVendors.map((vendor) => (
+                        <span
+                          key={vendor}
+                          className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                        >
+                          {vendor}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedVendors(
+                                selectedVendors.filter((v) => v !== vendor)
+                              )
+                            }
+                            className="hover:text-blue-900 font-bold"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
